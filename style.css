@@ -1,0 +1,16 @@
+@font-face {
+font-family: 'Eurostile';
+font-style: normal;
+font-weight: normal;
+src: local('Eurostile'), url('eurostile/eurostile.woff') format('woff');
+}
+
+
+@font-face {
+font-family: 'EuroStyle Normal';
+font-style: normal;
+font-weight: normal;
+src: local('EuroStyle Normal'), url('eurostile/EuroStyle Normal.woff') format('woff');
+}
+/*#TEXT { f/ont-family: "EUROSTILE", Georgia, serif; }*/
+canvas { font-family: Eurostile; }

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<style>
+</style>
+<title>Pong!</title>
+<link href="style.css" media="all" rel="stylesheet" »
+		type="text/css" />
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+<script type="text/javascript" src="https://cdn.rawgit.com/feathersjs/feathers-client/v1.1.0/dist/feathers.js"></script>
+<script>
+var host = 'http://localhost:3030';
+var socket = io(host);
+var client = feathers()
+	.configure(feathers.hooks())
+	.configure(feathers.socketio(socket));
+var game = client.service('games');
+var size = [window.innerWidth*.85, window.innerHeight*.85]
+var paddle_height = 60;
+var hasResized = false;
+var start = new Date();
+game.on('updated', function(x) {
+	paddle1.top = size[0] - (x.paddle1+50);
+	paddle2.top = size[0] - (x.paddle2+50);
+});
+function resize_canvas(){
+		disableScrolling()
+		canvas = document.getElementById("pongCanvas");
+		if (canvas.width  < window.innerWidth)
+		{
+				canvas.width  = window.innerWidth * .85;
+				size[0] = canvas.width;
+				hasResized = true;
+
+		}
+
+		if (canvas.height < window.innerHeight)
+		{
+				canvas.height = window.innerHeight*.85;
+				size[1] = canvas.height;
+				paddle_height = size[1]/8;
+
+		}
+}
+function disableScrolling(){
+    var x=window.scrollX;
+    var y=window.scrollY;
+    window.onscroll=function(){window.scrollTo(x, y);};
+}
+var scores = [0, 0];
+var numb = 50;
+var ballXspeed = 1000/numb;
+var ballYspeed = 1000/numb;
+var change = 2.5;
+var increments = 0;
+var padding = 9;
+var ball = {
+	radius: 5,
+	color: 'white',
+	xspeed: ballXspeed, /* 50 pixels per second */
+	yspeed: ballYspeed, /* 50 pixels per second */
+	x:  size[0]/ 2,
+	y: 0,
+	goingRight: false,
+	goingDown: true,
+	bounceX: size[0] / 2,
+	bounceXTime: new Date().getTime(),
+	bounceY: 0,
+	bounceYTime: new Date().getTime()
+}
+var up = [false, false]
+var down = [false, false]
+// var up = false;``
+// var down = false;
+var startTime = new Date().getTime();
+//  speed is milliseconds per pixel to move paddles.
+var speed = 1000 / 70 /* 50 pixels per second */
+var hue = 0;
+var paddle1 = {
+	width: 5,
+	height: paddle_height,
+	color: 'white',
+	leftNotRight: true,
+	top: 0,
+	moving: 1,
+	startedMoving: 0,
+	startPos: 0
+}
+var paddle2 = {
+	width: 5,
+	height: paddle_height,
+	color: 'white',
+	leftNotRight: false,
+	top: size[1] - paddle_height,
+	moving: -1,
+	startedMoving: 0,
+	startPos: size[1] - paddle_height
+}
+var paddles = [paddle1, paddle2]
+
+
+function loop() {
+	update();
+	render();
+	requestAnimationFrame(loop);
+}
+function update() {
+	var nowdate = new Date()-start;
+	/*
+	THIS IS WHERE SPEED CHANGING CODE COULD BE
+	*/
+	// if((nowdate/1000)/60 > increments+1){
+	// 	var nu = parseInt((nowdate/1000)/60);
+	// 	var change_in = 50-(nu * 2.5);
+	// 	increments = increments+1;
+	// 	alert("NEW SPEED")
+	// 	ball.xspeed = 100/change_in;
+	// 	console.log("Speeding Up");
+	//
+	// }
+	for (var i = 0; i < paddles.length; i++) {
+		var paddle = paddles[i];
+		if(paddle.moving == 1) {
+			if(paddle.top == canvas.height - paddle.height)
+			paddle.moving = 0;
+			else {
+				var newPos = paddle.startPos + (new Date().getTime() - paddle.startedMoving) / speed;
+				if(newPos >= canvas.height - paddle.height) {
+					paddle.top = canvas.height - paddle.height;
+				}
+				else {
+					paddle.top = newPos;
+				}
+			}
+		}
+		else if(paddle.moving == -1) {
+			if(paddle.top == 0) {
+				paddle.moving = 0;
+			}
+			else {
+				var newPos = paddle.startPos - (new Date().getTime() - paddle.startedMoving) / speed;
+				if(newPos <= 0) {
+					paddle.top = 0;
+				}
+				else {
+					paddle.top = newPos;
+				}
+			}
+		}
+	}
+
+	var time = new Date().getTime();
+	var newX = ball.bounceX + (ball.goingRight ? 1 : -1) * (time - ball.bounceXTime) / ball.xspeed;
+	var newY = ball.bounceY + (ball.goingDown ? 1 : -1) * (time - ball.bounceYTime) / ball.yspeed;
+
+	if(ball.goingRight) {
+		if(newX + ball.radius > canvas.width - (padding+2) - paddles[1].width) {
+			if(newY - paddles[1].top >= 0 && newY - paddles[1].top < paddles[1].height) {
+				ball.goingRight = false;
+				ball.bounceXTime = time;
+				ball.bounceX = ball.x = canvas.width - padding- paddles[1].width - ball.radius;
+			}
+			else {
+				score(0);
+			}
+		}
+		else
+		ball.x = newX;
+	}
+	else {
+		if(newX - ball.radius < paddles[0].width + (padding+2)) {
+			if(newY - paddles[0].top >= 0 && newY - paddles[0].top < paddles[0].height) {
+				ball.goingRight = true;
+				ball.bounceXTime = time;
+				ball.bounceX = ball.x = paddles[0].width+ padding + ball.radius;
+			}
+			else {
+				score(1);
+			}
+		}
+		else
+		ball.x = newX;
+	}
+
+	if(ball.goingDown) {
+		if(newY + ball.radius >= canvas.height) {
+			ball.bounceY = ball.y = canvas.height - ball.radius;
+			ball.bounceYTime = time;
+			ball.goingDown = false;
+		}
+		else
+		ball.y = newY;
+	}
+	else {
+		if(newY - ball.radius <= 0) {
+			ball.bounceY = ball.y = ball.radius;
+			ball.bounceYTime = time;
+			ball.goingDown = true;
+		}
+		else
+		ball.y = newY;
+	}
+}
+function render() {
+
+
+
+	c.clearRect(0, 0, canvas.width, canvas.height);
+	c.fillStyle = 'black';
+	c.fillRect(0, 0, canvas.width, canvas.height);
+
+	c.fillStyle = 'white';
+
+	c.font = "100px Eurostile";
+	c.fillText(document.getElementById("score").innerHTML,(size[0]/2)-72,70);
+
+	for (var i = 0; i < paddles.length; i++) {
+		paddle = paddles[i];
+		c.fillStyle = paddle.color;
+		c.fillRect(
+			paddle.leftNotRight ? padding : (canvas.width - paddle.width-padding),
+			paddle.top,
+			paddle.width,
+			paddle.height
+		);
+	}
+	var starter = 0;
+	var squareheight = 35;
+	var space = 25;
+	var squarewidth = 15;
+	while(starter < size[1]){
+			c.fillStyle = 'white';
+			c.fillRect(
+				(size[0]/2)-(squarewidth/2),
+				starter,
+				squarewidth,
+				squareheight
+			);
+			starter = starter + squareheight + space;
+	}
+
+
+
+	c.beginPath();
+	c.arc(ball.x, ball.y, ball.radius, 0, 2*Math.PI, false);
+	c.fillStyle = ball.color;
+	c.fill();
+	c.lineWidth = 1;
+	c.strokeStyle = 'white';
+	c.stroke();
+	c.closePath();
+}
+function Down_DownKeyPaddle(index){
+	var paddle = paddles[index];
+
+	if(!down[index]) {
+		down[index] = true;
+		if(paddle.top < canvas.height - paddle.height - 5) {
+			paddle.moving = 1;
+			paddle.startedMoving = new Date().getTime();
+			paddle.startPos = paddle.top;
+		}
+	}
+}
+function Down_UpKeyPaddle(index){
+	var paddle = paddles[index];
+	if(!up[index]) {
+		up[index] = true;
+		if(paddle.top > 5) {
+			paddle.moving = -1;
+			paddle.startedMoving = new Date().getTime();
+			paddle.startPos = paddle.top;
+		}
+	}
+}
+function Up_DownKeyPaddle(index){
+	var paddle = paddles[index];
+	down[index] = false;
+	if(up[index]) {
+		if(paddle.top > 5) {
+			paddle.moving = -1;
+		}
+	}
+	else
+	{
+		paddle.moving = 0;
+	}
+}
+function Up_UpKeyPaddle(index){
+	var paddle = paddles[index];
+	up[index] = false;
+	if(down[index]) {
+		if(paddle.top < canvas.height - paddle.height - 5) {
+			paddle.moving = 1;
+		}
+	}
+	else
+	{
+		paddle.moving = 0;
+	}
+}
+document.onkeydown = function(event) {
+	if (!event)
+		event = window.event;
+	var code = event.keyCode;
+	if (event.charCode && code == 0)
+		code = event.charCode;
+	if(code == 87){
+		Down_UpKeyPaddle(0);
+	}
+	else if (code == 83){
+		Down_DownKeyPaddle(0);
+	}
+	if(code == 38){
+		// Key up.
+		Down_UpKeyPaddle(1);
+	}
+	else if (code == 40){
+		// Key down.
+		Down_DownKeyPaddle(1);
+	}
+
+	event.preventDefault();
+};
+document.onkeyup = function(event) {
+	if (!event)
+	event = window.event;
+	var code = event.keyCode;
+	if (event.charCode && code == 0)
+	code = event.charCode;
+	if(code == 87){
+		Up_UpKeyPaddle(0);
+	}
+	else if (code == 83){
+		Up_DownKeyPaddle(0);
+	}
+	if(code == 38){
+		// Key up.
+		Up_UpKeyPaddle(1);
+	}
+	else if (code == 40){
+		// Key down.
+		Up_DownKeyPaddle(1);
+	}
+
+	event.preventDefault();
+};
+
+
+/*
+function keyDown() {
+var key = event.key;
+var paddle = paddles[0];
+if(key == 'Up') {
+if(!up) {
+up = true;
+if(paddle.top > 5) {
+paddle.moving = -1;
+paddle.startedMoving = new Date().getTime();
+paddle.startPos = paddle.top;
+}
+}
+}
+if(key == 'Down') {
+if(!down) {
+down = true;
+if(paddle.top < canvas.height - paddle.height - 5) {
+paddle.moving = 1;
+paddle.startedMoving = new Date().getTime();
+paddle.startPos = paddle.top;
+}
+}
+}
+
+}
+*/
+function keyUp() {
+	var paddle = paddles[0];
+	var key = event.key;
+	if(key == 'Up') {
+		up = false;
+		if(down) {
+			if(paddle.top < canvas.height - paddle.height - 5) {
+				paddle.moving = 1;
+			}
+		}
+		else
+		paddle.moving = 0;
+	}
+	else if(key == 'Down') {
+		down = false;
+		if(up) {
+			if(paddle.top > 5) {
+				paddle.moving = -1;
+			}
+		}
+		else
+		paddle.moving = 0;
+	}
+}
+//	Player 0 or player 1 scored 1 point.
+function score(player) {
+	scores[player]++;
+	scoreText.innerHTML = scores[0] + ' ' + scores[1];
+	var time = new Date().getTime();
+	ball.bounceX = ball.x = canvas.width / 2;
+	ball.bounceXTime = time;
+	ball.bounceY = ball.y = ball.radius;
+	ball.bounceYTime = time;
+}
+function resizeCanvas(){
+
+	if (canvas.width != window.innerWidth)
+	{
+		canvas.width  = window.innerWidth;
+	}
+	if (canvas.height != window.innerHeight)
+	{
+		canvas.height = window.innerHeight;
+	}
+}
+</script>
+</head>
+<body onload="resize_canvas()"style="text-align: center; background-color: black">
+	<h1 style="display: none; font-family:'Eurostile';font-weight:normal;color: white;font-size:42px">SCORE<br><span id="score">0 0</span></h1>
+	<canvas id="pongCanvas" tabindex=1 style="font-family:'Eurostile';font-weight:normal;overflow:hidden; display: inline; border: white 2px solid"  onresize="resizeCanvas()">Your browser doesn't support this game :(</canvas>
+
+	<script>
+	var canvas = document.getElementById("pongCanvas");
+	var c = canvas.getContext("2d");
+	var scoreText = document.getElementById("score");
+
+	requestAnimationFrame(loop);
+	</script>
+</body>
+</html>

@@ -6,7 +6,15 @@
 
 		</style>
 		<title>Pong!</title>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+  <script type="text/javascript" src="https://cdn.rawgit.com/feathersjs/feathers-client/v1.1.0/dist/feathers.js"></script>
 		<script>
+    var host = 'http://localhost:3030';
+    var socket = io(host);
+    var client = feathers()
+      .configure(feathers.hooks())
+      .configure(feathers.socketio(socket));
+    var game = client.service('games');
 		var scores = [0, 0];
 		var ball = {
 			radius: 5,
@@ -49,13 +57,17 @@
 			startPos: 300 - 40
 		}
 		var paddles = [paddle1, paddle2]
-		
-		
+    game.on('updated', function(x) {
+      paddle1.top = 400 - x.paddle1;
+      paddle2.top = 400 - x.paddle2;
+    });
+
 		function loop() {
 			update();
 			render();
 			requestAnimationFrame(loop);
 		}
+
 		function update() {
 			for (var i = 0; i < paddles.length; i++) {
 				var paddle = paddles[i];
@@ -88,11 +100,11 @@
 					}
 				}
 			}
-			
+
 			var time = new Date().getTime();
 			var newX = ball.bounceX + (ball.goingRight ? 1 : -1) * (time - ball.bounceXTime) / ball.xspeed;
 			var newY = ball.bounceY + (ball.goingDown ? 1 : -1) * (time - ball.bounceYTime) / ball.yspeed;
-			
+
 			if(ball.goingRight) {
 				if(newX + ball.radius > canvas.width - paddles[1].width) {
 					if(newY - paddles[1].top >= 0 && newY - paddles[1].top < paddles[1].height) {
@@ -121,7 +133,7 @@
 				else
 					ball.x = newX;
 			}
-			
+
 			if(ball.goingDown) {
 				if(newY + ball.radius >= canvas.height) {
 					ball.bounceY = ball.y = canvas.height - ball.radius;
@@ -145,8 +157,8 @@
 			c.clearRect(0, 0, canvas.width, canvas.height);
 			c.fillStyle = 'black';
 			c.fillRect(0, 0, canvas.width, canvas.height);
-			
-			
+
+
 			for (var i = 0; i < paddles.length; i++) {
 				paddle = paddles[i];
 				c.fillStyle = paddle.color;
@@ -157,7 +169,7 @@
 					paddle.height
 				);
 			}
-			
+
 			c.beginPath();
 			c.arc(ball.x, ball.y, ball.radius, 0, 2*Math.PI, false);
 			c.fillStyle = ball.color;
@@ -167,7 +179,43 @@
 			c.stroke();
 			c.closePath();
 		}
+		document.onkeydown = function(event) {
+		     if (!event)
+		          event = window.event;
+		     var code = event.keyCode;
+		     if (event.charCode && code == 0)
+		          code = event.charCode;
+		     switch(code) {
+		          case 38:
+		              // Key up.
+									var paddle = paddles[0];
+									if(!up) {
+										up = true;
+										if(paddle.top > 5) {
+											paddle.moving = -1;
+											paddle.startedMoving = new Date().getTime();
+											paddle.startPos = paddle.top;
+										}
+									}
+		              break;
+		          case 40:
+		              // Key down.
+									var paddle = paddles[0];
+
+									if(!down) {
+										down = true;
+										if(paddle.top < canvas.height - paddle.height - 5) {
+											paddle.moving = 1;
+											paddle.startedMoving = new Date().getTime();
+											paddle.startPos = paddle.top;
+										}
+									}
+		              break;
+		     }
+		     event.preventDefault();
+		};
 		function keyDown() {
+			/*
 			var key = event.key;
 			var paddle = paddles[0];
 			if(key == 'Up') {
@@ -189,8 +237,8 @@
 						paddle.startPos = paddle.top;
 					}
 				}
-			}
-			
+			}*/
+
 		}
 		function keyUp() {
 			var paddle = paddles[0];
@@ -208,7 +256,7 @@
 			else if(key == 'Down') {
 				down = false;
 				if(up) {
-					if(paddle.top > 5) {
+					if(paddle.top > 0) {
 						paddle.moving = -1;
 					}
 				}
@@ -241,12 +289,12 @@
 	</head>
 	<body width=100% style="text-align: center; background-color: black">
 		<h1 style="color: white">SCORE<br><span id=score>0:0</span></h1>
-		<canvas id=pongCanvas tabindex=1 style="width: 100%; height: 75%; display: inline; border: white 2px solid" onKeyDown="keyDown()" onKeyUp="keyUp()" onresize="resizeCanvas()">Your browser doesn't support this game :(</canvas>
+		<canvas id=pongCanvas tabindex=1 style="width: 100%; height: 75%; display: inline; border: white 2px solid" onKeyDown="keyDown()" onKeyUp="keyUp()" onload="resizeCanvas()" onresize="resizeCanvas()">Your browser doesn't support this game :(</canvas>
 		<script>
 		var canvas = document.getElementById("pongCanvas");
 		var c = canvas.getContext("2d");
 		var scoreText = document.getElementById("score");
-		
+
 		requestAnimationFrame(loop);
 		</script>
 	</body>
