@@ -22,8 +22,8 @@ var paddle_height = 60;
 var hasResized = false;
 var start = new Date();
 game.on('updated', function(x) {
-	paddle1.top = size[0] - (x.paddle1+50);
-	paddle2.top = size[0] - (x.paddle2+50);
+	paddle1.top = size[1] - (x.paddle1+50);
+	paddle2.top = size[1] - (x.paddle2+50);
 });
 function resize_canvas(){
 		disableScrolling()
@@ -51,8 +51,8 @@ function disableScrolling(){
 }
 var scores = [0, 0];
 var numb = 50;
-var ballXspeed = 1000/numb;
-var ballYspeed = 1000/numb;
+var ballXspeed = 1000/100;
+var ballYspeed = 1000/(Math.random() * 50 + 75);
 var change = 2.5;
 var increments = 0;
 var padding = 9;
@@ -111,14 +111,12 @@ function update() {
 	/*
 	THIS IS WHERE SPEED CHANGING CODE COULD BE
 	*/
-	// if((nowdate/1000)/60 > increments+1){
-	// 	var nu = parseInt((nowdate/1000)/60);
-	// 	var change_in = 50-(nu * 2.5);
+	// if((nowdate/1000) > 1){
+	// 	var change_in = 70+(increments*10.5);
 	// 	increments = increments+1;
-	// 	alert("NEW SPEED")
-	// 	ball.xspeed = 100/change_in;
-	// 	console.log("Speeding Up");
-	//
+	// 	ball.xspeed = 1000/change_in;
+	// 	console.log("Speeding Up to " + change_in);
+	// 	start = new Date();
 	// }
 	for (var i = 0; i < paddles.length; i++) {
 		var paddle = paddles[i];
@@ -161,6 +159,7 @@ function update() {
 				ball.goingRight = false;
 				ball.bounceXTime = time;
 				ball.bounceX = ball.x = canvas.width - padding- paddles[1].width - ball.radius;
+				ball.xspeed *= 0.75;
 			}
 			else {
 				score(0);
@@ -175,6 +174,7 @@ function update() {
 				ball.goingRight = true;
 				ball.bounceXTime = time;
 				ball.bounceX = ball.x = paddles[0].width+ padding + ball.radius;
+				ball.xspeed *= 0.75;
 			}
 			else {
 				score(1);
@@ -409,6 +409,9 @@ function score(player) {
 	ball.bounceXTime = time;
 	ball.bounceY = ball.y = ball.radius;
 	ball.bounceYTime = time;
+	ball.goingRight = Math.floor(Math.random() * 2) == 0;
+	ball.xspeed = ballXspeed;
+	ball.yspeed = 1000/(Math.random() * 50 + 75);
 }
 function resizeCanvas(){
 
