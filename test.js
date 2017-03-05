@@ -5,6 +5,6 @@ var client = feathers()
   .configure(feathers.socketio(socket));
 var game = client.service('games');
 
-game.on('created', function(x) {
+game.on('updated', function(x) {
   console.log(x);
 });
